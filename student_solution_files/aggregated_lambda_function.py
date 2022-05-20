@@ -58,7 +58,22 @@ def lambda_handler(event, context):
     # --- Amazon Comprehend ---
     comprehend = boto3.client(service_name='comprehend')
     
-    # --- Insert your code here ---
+    #From json string generate our sentiment dictionary
+    sentiment_string = json.dumps(comprehend.detect_sentiment(Text=dec_dict['message'], LanguageCode='en'), sort_keys=True, indent=4)
+    sentiment_dictionary = json.loads(sentiment_string)
+    
+    #Call our 'find_max_sentiment()' function
+    #find_max_sentiment(sentiment_dictionary)
+    
+    
+    #From json string generate our key phrase dictionary
+    key_phrase_string = json.dumps(comprehend.detect_key_phrases(Text=dec_dict['message'], LanguageCode='en'), sort_keys=True, indent=4)
+    key_phrase_dictionary = json.loads(key_phrase_string)
+    
+    #Call our 'key_phrase_finder()' function passing the appropriate parameters. Save in 'phrases' variable (returned as a tuple)
+    phrases = key_phrase_finder(important_words, key_phrase_dictionary)[0]
+    print(phrases)
+    
     enquiry_text = None # <--- Insert code to place the website message into this variable
     # -----------------------------
     
@@ -91,7 +106,44 @@ def lambda_handler(event, context):
     # Insert code to send an email, using AWS SES, with the above defined 
     # `email_text` variable as it's body.
     # <<< Ensure that the SES service response is stored in the variable `ses_response` >>> 
-    # --- Insert your code here ---
+   SENDER = 'vincechinedu392@gmail.com'
+    RECIPIENT = dec_dict['email']
+    SUBJECT = f"Data Science Portfolio Project Website - Hello {dec_dict['name']}"
+    BODY_TEXT = (email_text)
+    CHARSET = "UTF-8"
+    client = boto3.client('ses')
+     # Try to send the email.
+    try:
+        #Provide the contents of the email.
+        ses_response = client.send_email(
+            Destination={
+                'ToAddresses': [
+                    RECIPIENT,
+                    'edsa.predicts@explore-ai.net', # <--- Uncomment this line once you have successfully tested your predict end-to-end
+                ],
+            },
+            Message={
+                'Body': {
+
+                    'Text': {
+                        'Charset': CHARSET,
+                        'Data': BODY_TEXT,
+                    },
+                },
+                'Subject': {
+                    'Charset': CHARSET,
+                    'Data': SUBJECT,
+                },
+            },
+            Source=SENDER,
+        )
+
+    # Display an error if something goes wrong.	
+    except ClientError as e:
+        print(e.response['Error']['Message'])
+    else:
+        print("Email sent! Message ID:"),
+        print(ses_response['MessageId'])
 
     # Do not change the name of this variable
     ses_response = None
